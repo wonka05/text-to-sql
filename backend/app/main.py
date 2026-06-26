@@ -1,21 +1,16 @@
 from fastapi import FastAPI
+from app.api.employee import router as employee_router
 
 app = FastAPI(
-    title="AI SQL Assistant",
-    description="Convert natural language into SQL queries using AI",
+    title="QueryGenie",
     version="1.0.0"
 )
 
+app.include_router(employee_router)
+
 
 @app.get("/")
-def root():
+def home():
     return {
-        "message": "Welcome to AI SQL Assistant 🚀"
-    }
-
-
-@app.get("/health")
-def health():
-    return {
-        "status": "Healthy"
+        "message": "Welcome to QueryGenie 🚀"
     }
