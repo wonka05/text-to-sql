@@ -4,13 +4,13 @@ from sqlalchemy import text
 from app.database.connection import engine
 from app.services.ai_service import generate_sql
 from app.utils.sql_validator import validate_sql
+from app.schemas.query import QueryRequest
 
 router = APIRouter()
 
-
 @router.post("/query")
-def query(data: dict):
-    question = data["question"]
+def query(request: QueryRequest):
+    question = request.question
 
     sql = generate_sql(question)
     if not validate_sql(sql):
