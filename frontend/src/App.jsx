@@ -1,5 +1,14 @@
 import { useState } from "react";
 
+import Navbar from "./layout/Navbar";
+import Header from "./layout/Header";
+
+import ChatMessage from "./components/ChatMessage";
+import SQLCard from "./components/SQLCard";
+import ResultsTable from "./components/ResultsTable";
+import LoadingSpinner from "./components/LoadingSpinner";
+import InputBar from "./components/InputBar";
+
 function App() {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
@@ -42,157 +51,123 @@ function App() {
       setQuestion("");
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
-    <div className="container mt-5">
-      <div className="card shadow-lg">
-        <div className="card-body">
+    <>
+      <Navbar />
 
-          <h1 className="text-center text-primary">
-            🤖 QueryGenie
-          </h1>
+      <div
+        className="container-fluid"
+        style={{
+          background: "#F8FAFC",
+          minHeight: "100vh",
+        }}
+      >
+        <div className="container py-4">
 
-          <p className="text-center text-muted mb-4">
-            Ask questions about your database using natural language
-          </p>
+          <Header />
 
-          <div
-            style={{
-              maxHeight: "550px",
-              overflowY: "auto",
-              marginBottom: "25px",
-            }}
-          >
-            {messages.map((msg, index) => (
-              <div key={index} className="mb-5">
+          <div className="card shadow-sm border-0">
 
-                <div className="alert alert-primary">
-                  <strong>👤 You</strong>
-                  <br />
-                  {msg.question}
-                </div>
+            <div className="card-body">
 
-                <div className="card mb-3">
-                  <div className="card-header bg-dark text-white">
-                    Generated SQL
+              <div
+                style={{
+                  maxHeight: "550px",
+                  overflowY: "auto",
+                  marginBottom: "25px",
+                }}
+              >
+                {messages.length === 0 && (
+                  <div className="text-center text-muted py-5">
+                    <h5>Start by asking a question</h5>
+
+                    <p className="mt-3">
+                      Example:
+                    </p>
+
+                    <div className="d-flex flex-column gap-2">
+
+                      <button
+                        className="btn btn-outline-primary"
+                        onClick={() =>
+                          setQuestion("Highest paid employee")
+                        }
+                      >
+                        Highest paid employee
+                      </button>
+
+                      <button
+                        className="btn btn-outline-primary"
+                        onClick={() =>
+                          setQuestion("Average salary by department")
+                        }
+                      >
+                        Average salary by department
+                      </button>
+
+                      <button
+                        className="btn btn-outline-primary"
+                        onClick={() =>
+                          setQuestion("Products with low stock")
+                        }
+                      >
+                        Products with low stock
+                      </button>
+
+                    </div>
                   </div>
+                )}
 
-                  <div className="card-body">
-                    <pre>{msg.sql}</pre>
-                  </div>
-                </div>
+                {messages.map((msg, index) => (
+                  <div key={index} className="mb-5">
 
-                <div className="card mb-3">
-                  <div className="card-header bg-info text-white">
-                    SQL Explanation
-                  </div>
+                    <ChatMessage
+                      question={msg.question}
+                    />
 
-                  <div className="card-body">
-                    {msg.explanation}
-                  </div>
-                </div>
+                    <SQLCard
+                      sql={msg.sql}
+                      explanation={msg.explanation}
+                    />
 
-                <div className="card">
-                  <div className="card-header bg-success text-white">
-                    Query Results
-                  </div>
-
-                  <div className="card-body">
-
-                    {msg.data.length > 0 ? (
-
-                      <div className="table-responsive">
-
-                        <table className="table table-striped table-hover table-bordered">
-
-                          <thead className="table-dark">
-
-                            <tr>
-                              {Object.keys(msg.data[0]).map((key) => (
-                                <th key={key}>{key}</th>
-                              ))}
-                            </tr>
-
-                          </thead>
-
-                          <tbody>
-
-                            {msg.data.map((row, i) => (
-                              <tr key={i}>
-                                {Object.values(row).map((value, j) => (
-                                  <td key={j}>{String(value)}</td>
-                                ))}
-                              </tr>
-                            ))}
-
-                          </tbody>
-
-                        </table>
-
-                      </div>
-
-                    ) : (
-
-                      <div className="alert alert-warning">
-                        No records found.
-                      </div>
-
-                    )}
+                    <ResultsTable
+                      data={msg.data}
+                    />
 
                   </div>
-                </div>
+                ))}
+
+                {loading && <LoadingSpinner />}
 
               </div>
-            ))}
 
-            {loading && (
-              <div className="text-center">
-                <div className="spinner-border text-primary"></div>
-                <p className="mt-3">
-                  🤖 QueryGenie is thinking...
-                </p>
-              </div>
-            )}
+              {error && (
+                <div className="alert alert-danger">
+                  {error}
+                </div>
+              )}
 
-          </div>
+              <InputBar
+                question={question}
+                setQuestion={setQuestion}
+                askQuestion={askQuestion}
+                loading={loading}
+              />
 
-          {error && (
-            <div className="alert alert-danger">
-              {error}
             </div>
-          )}
-
-          <div className="input-group">
-
-            <input
-              className="form-control"
-              placeholder="Ask anything..."
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  askQuestion();
-                }
-              }}
-            />
-
-            <button
-              className="btn btn-primary"
-              onClick={askQuestion}
-              disabled={loading}
-            >
-              {loading ? "Thinking..." : "Send"}
-            </button>
 
           </div>
 
         </div>
+
       </div>
-    </div>
+
+    </>
   );
 }
 
