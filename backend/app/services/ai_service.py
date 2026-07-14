@@ -1,4 +1,5 @@
 import os
+import json
 from dotenv import load_dotenv
 import google.generativeai as genai
 
@@ -58,10 +59,17 @@ Table: order_items
 - unit_price
 
 Rules:
-- Return ONLY valid MySQL SQL.
-- Do NOT use markdown.
-- Do NOT explain anything.
-- Generate only SELECT queries.
+1. Generate ONLY SELECT queries.
+2. Return ONLY valid JSON.
+3. Do NOT use markdown.
+4. Do NOT wrap the response in ```.
+
+Return exactly in this format:
+
+{{
+    "sql": "SELECT ...",
+    "explanation": "Brief explanation of what the query does."
+}}
 
 User Question:
 {question}
@@ -69,4 +77,8 @@ User Question:
 
     response = model.generate_content(prompt)
 
-    return response.text.strip()
+    text = response.text.strip()
+
+    result = json.loads(text)
+
+    return result

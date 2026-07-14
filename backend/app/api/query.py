@@ -8,15 +8,20 @@ from app.schemas.query import QueryRequest
 
 router = APIRouter()
 
+
 @router.post("/query")
 def query(request: QueryRequest):
     question = request.question
 
-    sql = generate_sql(question)
+    ai_response = generate_sql(question)
+
+    sql = ai_response["sql"]
+    explanation = ai_response["explanation"]
+
     if not validate_sql(sql):
         return {
-        "error": "Unsafe SQL generated."
-    }
+            "error": "Unsafe SQL generated."
+        }
 
     with engine.connect() as conn:
         result = conn.execute(text(sql))
@@ -25,5 +30,6 @@ def query(request: QueryRequest):
     return {
         "question": question,
         "sql": sql,
+        "explanation": explanation,
         "data": rows
     }
