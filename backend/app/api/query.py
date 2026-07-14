@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from sqlalchemy import text
+import time
 
 from app.database.connection import engine
 from app.services.ai_service import generate_sql
@@ -12,6 +13,9 @@ router = APIRouter()
 @router.post("/query")
 def query(request: QueryRequest):
     question = request.question
+
+    # Start timer
+    start_time = time.perf_counter()
 
     ai_response = generate_sql(question)
 
@@ -27,9 +31,18 @@ def query(request: QueryRequest):
         result = conn.execute(text(sql))
         rows = result.mappings().all()
 
+    # End timer
+    end_time = time.perf_counter()
+
+    execution_time = round((end_time - start_time) * 1000, 2)
+
     return {
         "question": question,
         "sql": sql,
         "explanation": explanation,
-        "data": rows
+        "data": rows,
+        "execution_time": execution_time,
+        "rows_returned": len(rows),
+        "model": "Gemini 2.5 Flash",
+        "status": "Success"
     }

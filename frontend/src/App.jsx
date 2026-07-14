@@ -5,6 +5,7 @@ import Header from "./layout/Header";
 
 import ChatMessage from "./components/ChatMessage";
 import SQLCard from "./components/SQLCard";
+import ExecutionStats from "./components/ExecutionStats";
 import ResultsTable from "./components/ResultsTable";
 import LoadingSpinner from "./components/LoadingSpinner";
 import InputBar from "./components/InputBar";
@@ -45,6 +46,11 @@ function App() {
           sql: data.sql,
           explanation: data.explanation,
           data: data.data,
+
+          executionTime: data.execution_time,
+          rowsReturned: data.rows_returned,
+          model: data.model,
+          status: data.status,
         },
       ]);
 
@@ -77,20 +83,21 @@ function App() {
 
               <div
                 style={{
-                  maxHeight: "550px",
+                  maxHeight: "70vh",
                   overflowY: "auto",
                   marginBottom: "25px",
                 }}
               >
                 {messages.length === 0 && (
                   <div className="text-center text-muted py-5">
-                    <h5>Start by asking a question</h5>
+
+                    <h4>Ask your first question</h4>
 
                     <p className="mt-3">
-                      Example:
+                      Try one of these:
                     </p>
 
-                    <div className="d-flex flex-column gap-2">
+                    <div className="d-grid gap-2 col-md-6 mx-auto">
 
                       <button
                         className="btn btn-outline-primary"
@@ -120,6 +127,7 @@ function App() {
                       </button>
 
                     </div>
+
                   </div>
                 )}
 
@@ -133,6 +141,13 @@ function App() {
                     <SQLCard
                       sql={msg.sql}
                       explanation={msg.explanation}
+                    />
+
+                    <ExecutionStats
+                      model={msg.model}
+                      executionTime={msg.executionTime}
+                      rowsReturned={msg.rowsReturned}
+                      status={msg.status}
                     />
 
                     <ResultsTable
@@ -166,7 +181,6 @@ function App() {
         </div>
 
       </div>
-
     </>
   );
 }
