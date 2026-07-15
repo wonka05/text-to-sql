@@ -1,198 +1,360 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { ToastContainer, toast } from "react-toastify";
+
+import Navbar from "./layout/Navbar";
+import Header from "./layout/Header";
+
+import HistorySidebar from "./components/HistorySidebar";
+import ChatMessage from "./components/ChatMessage";
+import SQLCard from "./components/SQLCard";
+import ExecutionStats from "./components/ExecutionStats";
+import ResultsTable from "./components/ResultsTable";
+import LoadingSpinner from "./components/LoadingSpinner";
+import InputBar from "./components/InputBar";
+
+import { askQuery } from "./services/api";
 
 function App() {
+
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
+  const [selectedIndex, setSelectedIndex] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+
+  const [darkMode, setDarkMode] = useState(
+    localStorage.getItem("theme") === "dark"
+  );
+
+  /* -------------------------
+      Load History
+  -------------------------- */
+
+  useEffect(() => {
+
+    const savedHistory =
+      localStorage.getItem("querygenie-history");
+
+    if (savedHistory) {
+
+      const parsed = JSON.parse(savedHistory);
+
+      setMessages(parsed);
+
+      if (parsed.length > 0) {
+        setSelectedIndex(parsed.length - 1);
+      }
+
+    }
+
+  }, []);
+
+  /* -------------------------
+      Save History
+  -------------------------- */
+
+  useEffect(() => {
+
+    localStorage.setItem(
+      "querygenie-history",
+      JSON.stringify(messages)
+    );
+
+  }, [messages]);
+
+  /* -------------------------
+      Theme
+  -------------------------- */
+
+  useEffect(() => {
+
+    if (darkMode) {
+
+      document.body.classList.add("dark-mode");
+      localStorage.setItem("theme", "dark");
+
+    } else {
+
+      document.body.classList.remove("dark-mode");
+      localStorage.setItem("theme", "light");
+
+    }
+
+  }, [darkMode]);
+
+  /* -------------------------
+      Clear History
+  -------------------------- */
+
+  const clearHistory = () => {
+
+    if (!window.confirm("Clear all history?"))
+      return;
+
+    setMessages([]);
+    setSelectedIndex(null);
+
+    localStorage.removeItem(
+      "querygenie-history"
+    );
+
+    toast.success("History cleared");
+
+  };
+
+  /* -------------------------
+      Ask AI
+  -------------------------- */
 
   const askQuestion = async () => {
+
     if (!question.trim()) return;
 
     setLoading(true);
-    setError("");
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/query", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          question,
-        }),
+
+      const data = await askQuery(question);
+
+      const newMessage = {
+
+        question,
+
+        sql: data.sql,
+
+        explanation: data.explanation,
+
+        data: data.data,
+
+        executionTime: data.execution_time,
+
+        rowsReturned: data.rows_returned,
+
+        model: data.model,
+
+        status: data.status,
+
+        timestamp: new Date().toISOString(),
+
+      };
+
+      setMessages(prev => {
+
+        const updated = [
+          ...prev,
+          newMessage,
+        ];
+
+        setSelectedIndex(
+          updated.length - 1
+        );
+
+        return updated;
+
       });
 
-      const data = await res.json();
-
-      if (!res.ok || data.error) {
-        throw new Error(data.error || "Something went wrong.");
-      }
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          question,
-          sql: data.sql,
-          explanation: data.explanation,
-          data: data.data,
-        },
-      ]);
-
       setQuestion("");
-    } catch (err) {
-      setError(err.message);
+
+      toast.success(
+        "Query executed successfully"
+      );
+
     }
 
-    setLoading(false);
+    catch (err) {
+
+      toast.error(err.message);
+
+    }
+
+    finally {
+
+      setLoading(false);
+
+    }
+
   };
 
   return (
-    <div className="container mt-5">
-      <div className="card shadow-lg">
-        <div className="card-body">
+        <>
+      <Navbar
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+      />
 
-          <h1 className="text-center text-primary">
-            🤖 QueryGenie
-          </h1>
+      <div className="container-fluid app-bg">
 
-          <p className="text-center text-muted mb-4">
-            Ask questions about your database using natural language
-          </p>
+        <div className="container py-4">
 
-          <div
-            style={{
-              maxHeight: "550px",
-              overflowY: "auto",
-              marginBottom: "25px",
-            }}
-          >
-            {messages.map((msg, index) => (
-              <div key={index} className="mb-5">
+          <Header />
 
-                <div className="alert alert-primary">
-                  <strong>👤 You</strong>
-                  <br />
-                  {msg.question}
-                </div>
+          <div className="row g-4">
 
-                <div className="card mb-3">
-                  <div className="card-header bg-dark text-white">
-                    Generated SQL
-                  </div>
+            {/* ================= HISTORY ================= */}
 
-                  <div className="card-body">
-                    <pre>{msg.sql}</pre>
-                  </div>
-                </div>
+            <div className="col-lg-3">
 
-                <div className="card mb-3">
-                  <div className="card-header bg-info text-white">
-                    SQL Explanation
-                  </div>
+              <HistorySidebar
+                messages={messages}
+                selectedIndex={selectedIndex}
+                setSelectedIndex={setSelectedIndex}
+                clearHistory={clearHistory}
+              />
 
-                  <div className="card-body">
-                    {msg.explanation}
-                  </div>
-                </div>
-
-                <div className="card">
-                  <div className="card-header bg-success text-white">
-                    Query Results
-                  </div>
-
-                  <div className="card-body">
-
-                    {msg.data.length > 0 ? (
-
-                      <div className="table-responsive">
-
-                        <table className="table table-striped table-hover table-bordered">
-
-                          <thead className="table-dark">
-
-                            <tr>
-                              {Object.keys(msg.data[0]).map((key) => (
-                                <th key={key}>{key}</th>
-                              ))}
-                            </tr>
-
-                          </thead>
-
-                          <tbody>
-
-                            {msg.data.map((row, i) => (
-                              <tr key={i}>
-                                {Object.values(row).map((value, j) => (
-                                  <td key={j}>{String(value)}</td>
-                                ))}
-                              </tr>
-                            ))}
-
-                          </tbody>
-
-                        </table>
-
-                      </div>
-
-                    ) : (
-
-                      <div className="alert alert-warning">
-                        No records found.
-                      </div>
-
-                    )}
-
-                  </div>
-                </div>
-
-              </div>
-            ))}
-
-            {loading && (
-              <div className="text-center">
-                <div className="spinner-border text-primary"></div>
-                <p className="mt-3">
-                  🤖 QueryGenie is thinking...
-                </p>
-              </div>
-            )}
-
-          </div>
-
-          {error && (
-            <div className="alert alert-danger">
-              {error}
             </div>
-          )}
 
-          <div className="input-group">
+            {/* ================= MAIN CONTENT ================= */}
 
-            <input
-              className="form-control"
-              placeholder="Ask anything..."
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  askQuestion();
-                }
-              }}
-            />
+            <div className="col-lg-9">
 
-            <button
-              className="btn btn-primary"
-              onClick={askQuestion}
-              disabled={loading}
-            >
-              {loading ? "Thinking..." : "Send"}
-            </button>
+              <div className="card border-0 shadow-sm main-card">
+
+                <div className="card-body">
+
+                  {/* Welcome Screen */}
+
+                  {messages.length === 0 && !loading && (
+
+                    <div className="welcome text-center py-5">
+
+                      <h3>
+                        Welcome to QueryGenie
+                      </h3>
+
+                      <p className="text-muted mb-4">
+                        Ask questions about your database
+                        using natural language.
+                      </p>
+
+                      <div className="d-grid gap-2 col-md-8 mx-auto">
+
+                        <button
+                          className="btn btn-outline-primary"
+                          onClick={() =>
+                            setQuestion(
+                              "Highest paid employee"
+                            )
+                          }
+                        >
+                          Highest paid employee
+                        </button>
+
+                        <button
+                          className="btn btn-outline-primary"
+                          onClick={() =>
+                            setQuestion(
+                              "Average salary by department"
+                            )
+                          }
+                        >
+                          Average salary by department
+                        </button>
+
+                        <button
+                          className="btn btn-outline-primary"
+                          onClick={() =>
+                            setQuestion(
+                              "Products with low stock"
+                            )
+                          }
+                        >
+                          Products with low stock
+                        </button>
+
+                      </div>
+
+                    </div>
+
+                  )}
+
+                  {/* Loading */}
+
+                  {loading && (
+                    <LoadingSpinner />
+                  )}
+
+                  {/* Selected Conversation */}
+
+                  {!loading &&
+                    selectedIndex !== null &&
+                    messages[selectedIndex] && (
+
+                      <>
+
+                        <ChatMessage
+                          question={
+                            messages[selectedIndex]
+                              .question
+                          }
+                        />
+
+                        <SQLCard
+                          sql={
+                            messages[selectedIndex].sql
+                          }
+                          explanation={
+                            messages[selectedIndex]
+                              .explanation
+                          }
+                        />
+
+                        <ExecutionStats
+                          model={
+                            messages[selectedIndex]
+                              .model
+                          }
+                          executionTime={
+                            messages[selectedIndex]
+                              .executionTime
+                          }
+                          rowsReturned={
+                            messages[selectedIndex]
+                              .rowsReturned
+                          }
+                          status={
+                            messages[selectedIndex]
+                              .status
+                          }
+                        />
+
+                        <ResultsTable
+                          data={
+                            messages[selectedIndex]
+                              .data
+                          }
+                        />
+
+                      </>
+
+                  )}
+
+                  <InputBar
+                    question={question}
+                    setQuestion={setQuestion}
+                    askQuestion={askQuestion}
+                    loading={loading}
+                  />
+
+                </div>
+
+              </div>
+
+            </div>
 
           </div>
 
         </div>
+
       </div>
-    </div>
+            <ToastContainer
+        position="top-right"
+        autoClose={2500}
+        newestOnTop
+        closeOnClick
+        pauseOnHover
+        theme={darkMode ? "dark" : "light"}
+      />
+
+    </>
   );
 }
 
