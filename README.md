@@ -248,7 +248,3 @@ Current restrictions include:
 - Cloud deployment
 
 ---
-
-LinkedIn
-
-https://www.linkedin.com/in/manasag1605/
