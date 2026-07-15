@@ -11,10 +11,10 @@ function HistorySidebar({
 
       <div className="card-header d-flex justify-content-between align-items-center">
 
-        <strong>
+        <div>
           <BsClockHistory className="me-2" />
-          History
-        </strong>
+          <strong>History</strong>
+        </div>
 
         <button
           className="btn btn-sm btn-outline-danger"
@@ -28,14 +28,14 @@ function HistorySidebar({
       <div
         className="list-group list-group-flush"
         style={{
-          maxHeight: "75vh",
+          maxHeight: "70vh",
           overflowY: "auto",
         }}
       >
 
         {messages.length === 0 ? (
           <div className="p-3 text-muted">
-            No history yet
+            No history
           </div>
         ) : (
           messages.map((msg, index) => (
