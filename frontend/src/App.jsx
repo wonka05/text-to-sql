@@ -15,16 +15,27 @@ import InputBar from "./components/InputBar";
 import { askQuery } from "./services/api";
 
 function App() {
+
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Load history on startup
+  const [darkMode, setDarkMode] = useState(
+    localStorage.getItem("theme") === "dark"
+  );
+
+  /* -------------------------
+      Load History
+  -------------------------- */
+
   useEffect(() => {
-    const savedHistory = localStorage.getItem("querygenie-history");
+
+    const savedHistory =
+      localStorage.getItem("querygenie-history");
 
     if (savedHistory) {
+
       const parsed = JSON.parse(savedHistory);
 
       setMessages(parsed);
@@ -32,75 +43,153 @@ function App() {
       if (parsed.length > 0) {
         setSelectedIndex(parsed.length - 1);
       }
+
     }
+
   }, []);
 
-  // Save history whenever messages change
+  /* -------------------------
+      Save History
+  -------------------------- */
+
   useEffect(() => {
+
     localStorage.setItem(
       "querygenie-history",
       JSON.stringify(messages)
     );
+
   }, [messages]);
 
+  /* -------------------------
+      Theme
+  -------------------------- */
+
+  useEffect(() => {
+
+    if (darkMode) {
+
+      document.body.classList.add("dark-mode");
+      localStorage.setItem("theme", "dark");
+
+    } else {
+
+      document.body.classList.remove("dark-mode");
+      localStorage.setItem("theme", "light");
+
+    }
+
+  }, [darkMode]);
+
+  /* -------------------------
+      Clear History
+  -------------------------- */
+
   const clearHistory = () => {
+
+    if (!window.confirm("Clear all history?"))
+      return;
+
     setMessages([]);
     setSelectedIndex(null);
 
-    localStorage.removeItem("querygenie-history");
+    localStorage.removeItem(
+      "querygenie-history"
+    );
 
     toast.success("History cleared");
+
   };
 
+  /* -------------------------
+      Ask AI
+  -------------------------- */
+
   const askQuestion = async () => {
+
     if (!question.trim()) return;
 
     setLoading(true);
 
     try {
+
       const data = await askQuery(question);
 
       const newMessage = {
+
         question,
+
         sql: data.sql,
+
         explanation: data.explanation,
+
         data: data.data,
+
         executionTime: data.execution_time,
+
         rowsReturned: data.rows_returned,
+
         model: data.model,
+
         status: data.status,
+
+        timestamp: new Date().toISOString(),
+
       };
 
-      setMessages((prev) => {
-        const updated = [...prev, newMessage];
+      setMessages(prev => {
 
-        setSelectedIndex(updated.length - 1);
+        const updated = [
+          ...prev,
+          newMessage,
+        ];
+
+        setSelectedIndex(
+          updated.length - 1
+        );
 
         return updated;
+
       });
 
       setQuestion("");
 
-      toast.success("Query executed successfully");
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setLoading(false);
+      toast.success(
+        "Query executed successfully"
+      );
+
     }
+
+    catch (err) {
+
+      toast.error(err.message);
+
+    }
+
+    finally {
+
+      setLoading(false);
+
+    }
+
   };
 
   return (
         <>
-      <Navbar />
+      <Navbar
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+      />
 
       <div className="container-fluid app-bg">
+
         <div className="container py-4">
 
           <Header />
 
           <div className="row g-4">
 
-            {/* History Sidebar */}
+            {/* ================= HISTORY ================= */}
 
             <div className="col-lg-3">
 
@@ -113,7 +202,7 @@ function App() {
 
             </div>
 
-            {/* Main Content */}
+            {/* ================= MAIN CONTENT ================= */}
 
             <div className="col-lg-9">
 
@@ -123,14 +212,17 @@ function App() {
 
                   {/* Welcome Screen */}
 
-                  {messages.length === 0 && (
+                  {messages.length === 0 && !loading && (
 
                     <div className="welcome text-center py-5">
 
-                      <h3>Welcome to QueryGenie</h3>
+                      <h3>
+                        Welcome to QueryGenie
+                      </h3>
 
                       <p className="text-muted mb-4">
-                        Ask questions about your database using natural language.
+                        Ask questions about your database
+                        using natural language.
                       </p>
 
                       <div className="d-grid gap-2 col-md-8 mx-auto">
@@ -138,7 +230,9 @@ function App() {
                         <button
                           className="btn btn-outline-primary"
                           onClick={() =>
-                            setQuestion("Highest paid employee")
+                            setQuestion(
+                              "Highest paid employee"
+                            )
                           }
                         >
                           Highest paid employee
@@ -147,7 +241,9 @@ function App() {
                         <button
                           className="btn btn-outline-primary"
                           onClick={() =>
-                            setQuestion("Average salary by department")
+                            setQuestion(
+                              "Average salary by department"
+                            )
                           }
                         >
                           Average salary by department
@@ -156,7 +252,9 @@ function App() {
                         <button
                           className="btn btn-outline-primary"
                           onClick={() =>
-                            setQuestion("Products with low stock")
+                            setQuestion(
+                              "Products with low stock"
+                            )
                           }
                         >
                           Products with low stock
@@ -170,7 +268,9 @@ function App() {
 
                   {/* Loading */}
 
-                  {loading && <LoadingSpinner />}
+                  {loading && (
+                    <LoadingSpinner />
+                  )}
 
                   {/* Selected Conversation */}
 
@@ -181,34 +281,51 @@ function App() {
                       <>
 
                         <ChatMessage
-                          question={messages[selectedIndex].question}
+                          question={
+                            messages[selectedIndex]
+                              .question
+                          }
                         />
 
                         <SQLCard
-                          sql={messages[selectedIndex].sql}
+                          sql={
+                            messages[selectedIndex].sql
+                          }
                           explanation={
-                            messages[selectedIndex].explanation
+                            messages[selectedIndex]
+                              .explanation
                           }
                         />
 
                         <ExecutionStats
-                          model={messages[selectedIndex].model}
+                          model={
+                            messages[selectedIndex]
+                              .model
+                          }
                           executionTime={
-                            messages[selectedIndex].executionTime
+                            messages[selectedIndex]
+                              .executionTime
                           }
                           rowsReturned={
-                            messages[selectedIndex].rowsReturned
+                            messages[selectedIndex]
+                              .rowsReturned
                           }
-                          status={messages[selectedIndex].status}
+                          status={
+                            messages[selectedIndex]
+                              .status
+                          }
                         />
 
                         <ResultsTable
-                          data={messages[selectedIndex].data}
+                          data={
+                            messages[selectedIndex]
+                              .data
+                          }
                         />
 
                       </>
 
-                    )}
+                  )}
 
                   <InputBar
                     question={question}
@@ -228,14 +345,13 @@ function App() {
         </div>
 
       </div>
-
-      <ToastContainer
+            <ToastContainer
         position="top-right"
         autoClose={2500}
         newestOnTop
         closeOnClick
         pauseOnHover
-        theme="light"
+        theme={darkMode ? "dark" : "light"}
       />
 
     </>

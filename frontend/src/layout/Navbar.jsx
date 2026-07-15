@@ -1,10 +1,11 @@
 import {
   BsDatabase,
   BsMoonStars,
+  BsSun,
   BsGithub,
 } from "react-icons/bs";
 
-function Navbar() {
+function Navbar({ darkMode, setDarkMode }) {
   return (
     <nav className="navbar navbar-expand-lg shadow-sm">
 
@@ -20,29 +21,9 @@ function Navbar() {
           />
 
           <strong>QueryGenie</strong>
-
         </a>
 
-        <div className="ms-auto">
-
-          <button
-            className="btn btn-light me-2"
-            title="Dark Mode"
-          >
-            <BsMoonStars />
-          </button>
-
-          <a
-            href="https://github.com/wonka05/text-to-sql"
-            target="_blank"
-            rel="noreferrer"
-            className="btn btn-light"
-            title="GitHub Repository"
-          >
-            <BsGithub />
-          </a>
-
-        </div>
+        
 
       </div>
 

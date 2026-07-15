@@ -1,7 +1,3 @@
-/* =========================================
-   GLOBAL
-========================================= */
-
 * {
   box-sizing: border-box;
 }
@@ -19,10 +15,6 @@ body {
   background: #f8fafc;
 }
 
-/* =========================================
-   NAVBAR
-========================================= */
-
 .navbar {
   background: #ffffff !important;
   border-bottom: 1px solid #e5e7eb;
@@ -32,10 +24,6 @@ body {
   font-weight: 700;
   font-size: 1.5rem;
 }
-
-/* =========================================
-   HEADER
-========================================= */
 
 .header-title {
   font-size: 2.5rem;
@@ -47,10 +35,6 @@ body {
   color: #6b7280;
   font-size: 1.1rem;
 }
-
-/* =========================================
-   MAIN CARD
-========================================= */
 
 .main-card {
   border-radius: 18px;
@@ -67,10 +51,6 @@ body {
   border-bottom: 1px solid #e5e7eb;
   font-weight: 600;
 }
-
-/* =========================================
-   CHAT WINDOW
-========================================= */
 
 .chat-window {
   max-height: 70vh;
@@ -97,17 +77,13 @@ body {
   background: #94a3b8;
 }
 
-/* =========================================
-   BUTTONS
-========================================= */
-
 .btn {
   border-radius: 10px;
   font-weight: 500;
 }
 
 .btn-primary {
-  background: #2563eb;
+  background: #0a3592;
   border: none;
 }
 
@@ -119,10 +95,6 @@ body {
   color: white;
 }
 
-/* =========================================
-   INPUT
-========================================= */
-
 .form-control {
   border-radius: 10px;
   border: 1px solid #d1d5db;
@@ -132,10 +104,6 @@ body {
   border-color: #2563eb;
   box-shadow: 0 0 0 0.15rem rgba(37, 99, 235, 0.15);
 }
-
-/* =========================================
-   TABLE
-========================================= */
 
 .table {
   margin-bottom: 0;
@@ -149,19 +117,11 @@ body {
   background: #f8fafc;
 }
 
-/* =========================================
-   CODE BLOCK
-========================================= */
-
 pre {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
 }
-
-/* =========================================
-   WELCOME SCREEN
-========================================= */
 
 .welcome {
   text-align: center;
@@ -179,9 +139,6 @@ pre {
   margin-bottom: 30px;
 }
 
-/* =========================================
-   EXECUTION STATS
-========================================= */
 
 .stats-card {
   transition: all 0.25s ease;
@@ -192,26 +149,14 @@ pre {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
 }
 
-/* =========================================
-   CHART
-========================================= */
-
 .chart-container {
   margin-top: 30px;
 }
-
-/* =========================================
-   TOAST
-========================================= */
 
 .Toastify__toast {
   border-radius: 10px;
   font-size: 14px;
 }
-
-/* =========================================
-   RESPONSIVE
-========================================= */
 
 @media (max-width: 992px) {
 
@@ -247,4 +192,76 @@ pre {
     width: 100%;
   }
 
+}
+
+body.dark-mode {
+    background: #0f172a;
+    color: #e2e8f0;
+}
+
+body.dark-mode .app-bg {
+    background: #0f172a;
+}
+
+body.dark-mode .navbar {
+    background: #111827 !important;
+    border-bottom: 1px solid #374151;
+}
+
+body.dark-mode .card {
+    background: #1e293b;
+    color: #e5e7eb;
+    border: 1px solid #334155;
+}
+
+body.dark-mode .card-header {
+    background: #273449;
+    color: white;
+}
+
+body.dark-mode .form-control {
+    background: #1e293b;
+    color: white;
+    border: 1px solid #475569;
+}
+
+body.dark-mode .form-control::placeholder {
+    color: #94a3b8;
+}
+
+body.dark-mode .btn-outline-primary {
+    color: #60a5fa;
+    border-color: #60a5fa;
+}
+
+body.dark-mode .btn-outline-primary:hover {
+    background: #2563eb;
+    color: white;
+}
+
+body.dark-mode .list-group-item {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+body.dark-mode .list-group-item.active {
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
+body.dark-mode table {
+    color: white;
+}
+
+body.dark-mode th {
+    background: #273449 !important;
+}
+
+body.dark-mode td {
+    background: #1e293b;
+}
+
+body.dark-mode .text-muted {
+    color: #94a3b8 !important;
 }
