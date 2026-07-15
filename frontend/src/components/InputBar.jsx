@@ -1,3 +1,5 @@
+import { BsSendFill } from "react-icons/bs";
+
 function InputBar({
   question,
   setQuestion,
@@ -5,13 +7,15 @@ function InputBar({
   loading,
 }) {
   return (
-    <div className="input-group">
+    <div className="input-group mt-4">
 
       <input
         className="form-control"
-        placeholder="Ask anything..."
+        placeholder="Ask a question about your database..."
         value={question}
-        onChange={(e) => setQuestion(e.target.value)}
+        onChange={(e) =>
+          setQuestion(e.target.value)
+        }
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             askQuestion();
@@ -20,11 +24,11 @@ function InputBar({
       />
 
       <button
-        className="btn btn-primary"
+        className="btn btn-primary px-4"
         onClick={askQuestion}
         disabled={loading}
       >
-        {loading ? "Thinking..." : "Send"}
+        <BsSendFill />
       </button>
 
     </div>

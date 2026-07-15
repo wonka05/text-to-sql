@@ -11,7 +11,7 @@ function ExecutionStats({
   rowsReturned,
   status,
 }) {
-  const stats = [
+  const cards = [
     {
       icon: <BsCpu />,
       title: "AI Model",
@@ -35,40 +35,40 @@ function ExecutionStats({
   ];
 
   return (
-    <div className="card shadow-sm border-0 mb-4">
+    <div className="card shadow-sm mb-4">
 
-      <div className="card-header bg-white">
+      <div className="card-header">
+
         <strong>Execution Details</strong>
+
       </div>
 
       <div className="card-body">
 
         <div className="row">
 
-          {stats.map((item, index) => (
+          {cards.map((card, index) => (
 
             <div
-              key={index}
               className="col-md-3 mb-3"
+              key={index}
             >
 
-              <div
-                className="border rounded p-3 h-100"
-              >
+              <div className="stats-card border rounded p-3 h-100">
 
                 <div
                   className="text-primary mb-2"
                   style={{ fontSize: "22px" }}
                 >
-                  {item.icon}
+                  {card.icon}
                 </div>
 
                 <small className="text-muted">
-                  {item.title}
+                  {card.title}
                 </small>
 
-                <h6 className="mt-2 mb-0 fw-bold">
-                  {item.value}
+                <h6 className="mt-2 fw-bold">
+                  {card.value}
                 </h6>
 
               </div>

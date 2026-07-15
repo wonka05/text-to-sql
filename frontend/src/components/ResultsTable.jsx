@@ -1,4 +1,9 @@
 import Papa from "papaparse";
+import { toast } from "react-toastify";
+
+import {
+  BsDownload,
+} from "react-icons/bs";
 
 import {
   Chart as ChartJS,
@@ -47,51 +52,57 @@ function ResultsTable({ data }) {
     link.click();
 
     URL.revokeObjectURL(url);
+
+    toast.success("CSV exported successfully");
   };
 
-  // Detect if data has one text column + one numeric column
   const keys = Object.keys(data[0]);
 
   let chart = null;
 
   if (keys.length === 2) {
-    const firstValue = data[0][keys[0]];
-    const secondValue = data[0][keys[1]];
+    const first = data[0][keys[0]];
+    const second = Number(data[0][keys[1]]);
 
     if (
-      typeof firstValue === "string" &&
-      typeof secondValue === "number"
+      typeof first === "string" &&
+      !isNaN(second)
     ) {
       chart = (
-        <div className="mt-4">
+        <div className="chart-container">
+
           <Bar
             data={{
               labels: data.map((row) => row[keys[0]]),
               datasets: [
                 {
                   label: keys[1],
-                  data: data.map((row) => row[keys[1]]),
+                  data: data.map((row) =>
+                    Number(row[keys[1]])
+                  ),
                 },
               ],
             }}
           />
+
         </div>
       );
     }
   }
 
   return (
-    <div className="card">
+    <div className="card shadow-sm">
 
-      <div className="card-header bg-success text-white d-flex justify-content-between">
+      <div className="card-header d-flex justify-content-between align-items-center">
 
-        <span>Query Results</span>
+        <strong>Query Results</strong>
 
         <button
-          className="btn btn-light btn-sm"
+          className="btn btn-outline-success btn-sm"
           onClick={exportCSV}
         >
-          📥 Export CSV
+          <BsDownload className="me-1" />
+          Export CSV
         </button>
 
       </div>
@@ -100,14 +111,20 @@ function ResultsTable({ data }) {
 
         <div className="table-responsive">
 
-          <table className="table table-striped table-hover table-bordered">
+          <table className="table table-hover table-striped table-bordered">
 
             <thead className="table-dark">
 
               <tr>
+
                 {keys.map((key) => (
-                  <th key={key}>{key}</th>
+
+                  <th key={key}>
+                    {key}
+                  </th>
+
                 ))}
+
               </tr>
 
             </thead>
@@ -115,11 +132,19 @@ function ResultsTable({ data }) {
             <tbody>
 
               {data.map((row, i) => (
+
                 <tr key={i}>
+
                   {Object.values(row).map((value, j) => (
-                    <td key={j}>{String(value)}</td>
+
+                    <td key={j}>
+                      {String(value)}
+                    </td>
+
                   ))}
+
                 </tr>
+
               ))}
 
             </tbody>

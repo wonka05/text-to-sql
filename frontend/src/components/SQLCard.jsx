@@ -1,29 +1,29 @@
+import { toast } from "react-toastify";
+
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 import {
   BsCodeSlash,
   BsClipboard,
-  BsCheckCircle
+  BsInfoCircle,
 } from "react-icons/bs";
 
 function SQLCard({ sql, explanation }) {
   const copySQL = async () => {
     await navigator.clipboard.writeText(sql);
+    toast.success("SQL copied successfully");
   };
 
   return (
     <>
-      <div className="card shadow-sm border-0 mb-4">
+      <div className="card shadow-sm mb-4">
 
-        <div className="card-header bg-white d-flex justify-content-between align-items-center">
+        <div className="card-header d-flex justify-content-between align-items-center">
 
           <div className="d-flex align-items-center">
 
-            <BsCodeSlash
-              className="me-2"
-              color="#2563EB"
-            />
+            <BsCodeSlash className="me-2 text-primary" />
 
             <strong>Generated SQL</strong>
 
@@ -44,9 +44,9 @@ function SQLCard({ sql, explanation }) {
           style={oneLight}
           customStyle={{
             margin: 0,
+            padding: "20px",
             borderRadius: 0,
             fontSize: "15px",
-            padding: "20px",
           }}
         >
           {sql}
@@ -54,14 +54,11 @@ function SQLCard({ sql, explanation }) {
 
       </div>
 
-      <div className="card shadow-sm border-0">
+      <div className="card shadow-sm mb-4">
 
-        <div className="card-header bg-white">
+        <div className="card-header">
 
-          <BsCheckCircle
-            className="me-2"
-            color="#2563EB"
-          />
+          <BsInfoCircle className="me-2 text-primary" />
 
           <strong>SQL Explanation</strong>
 

@@ -1,41 +1,51 @@
-import { BsDatabase, BsMoonStars, BsInfoCircle } from "react-icons/bs";
+import {
+  BsDatabase,
+  BsMoonStars,
+  BsGithub,
+} from "react-icons/bs";
 
 function Navbar() {
   return (
-    <nav
-      className="navbar navbar-expand-lg bg-white border-bottom shadow-sm sticky-top"
-      style={{ height: "70px" }}
-    >
+    <nav className="navbar navbar-expand-lg shadow-sm">
+
       <div className="container">
 
         <a
-          className="navbar-brand fw-bold fs-4 d-flex align-items-center"
-          href="#"
-          style={{ color: "#2563EB" }}
+          href="/"
+          className="navbar-brand d-flex align-items-center"
         >
-          <BsDatabase className="me-2" size={26} />
-          QueryGenie
+          <BsDatabase
+            className="me-2 text-primary"
+            size={28}
+          />
+
+          <strong>QueryGenie</strong>
+
         </a>
 
-        <div className="ms-auto d-flex gap-3">
+        <div className="ms-auto">
 
           <button
-            className="btn btn-light border"
+            className="btn btn-light me-2"
             title="Dark Mode"
           >
             <BsMoonStars />
           </button>
 
-          <button
-            className="btn btn-light border"
-            title="About"
+          <a
+            href="https://github.com/wonka05/text-to-sql"
+            target="_blank"
+            rel="noreferrer"
+            className="btn btn-light"
+            title="GitHub Repository"
           >
-            <BsInfoCircle />
-          </button>
+            <BsGithub />
+          </a>
 
         </div>
 
       </div>
+
     </nav>
   );
 }

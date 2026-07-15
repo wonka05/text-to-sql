@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ToastContainer, toast } from "react-toastify";
 
 import Navbar from "./layout/Navbar";
 import Header from "./layout/Header";
@@ -14,13 +15,11 @@ function App() {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const askQuestion = async () => {
     if (!question.trim()) return;
 
     setLoading(true);
-    setError("");
 
     try {
       const res = await fetch("http://127.0.0.1:8000/query", {
@@ -36,7 +35,7 @@ function App() {
       const data = await res.json();
 
       if (!res.ok || data.error) {
-        throw new Error(data.error || "Something went wrong.");
+        throw new Error(data.error || "Something went wrong");
       }
 
       setMessages((prev) => [
@@ -46,7 +45,6 @@ function App() {
           sql: data.sql,
           explanation: data.explanation,
           data: data.data,
-
           executionTime: data.execution_time,
           rowsReturned: data.rows_returned,
           model: data.model,
@@ -55,8 +53,10 @@ function App() {
       ]);
 
       setQuestion("");
+
+      toast.success("Query executed successfully");
     } catch (err) {
-      setError(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -67,34 +67,25 @@ function App() {
       <Navbar />
 
       <div
-        className="container-fluid"
-        style={{
-          background: "#F8FAFC",
-          minHeight: "100vh",
-        }}
+        className="container-fluid app-bg"
       >
         <div className="container py-4">
 
           <Header />
 
-          <div className="card shadow-sm border-0">
+          <div className="card border-0 shadow-sm main-card">
 
             <div className="card-body">
 
-              <div
-                style={{
-                  maxHeight: "70vh",
-                  overflowY: "auto",
-                  marginBottom: "25px",
-                }}
-              >
+              <div className="chat-window">
+
                 {messages.length === 0 && (
-                  <div className="text-center text-muted py-5">
+                  <div className="welcome">
 
-                    <h4>Ask your first question</h4>
+                    <h3>Welcome to QueryGenie</h3>
 
-                    <p className="mt-3">
-                      Try one of these:
+                    <p>
+                      Ask questions about your database using natural language.
                     </p>
 
                     <div className="d-grid gap-2 col-md-6 mx-auto">
@@ -111,7 +102,9 @@ function App() {
                       <button
                         className="btn btn-outline-primary"
                         onClick={() =>
-                          setQuestion("Average salary by department")
+                          setQuestion(
+                            "Average salary by department"
+                          )
                         }
                       >
                         Average salary by department
@@ -132,6 +125,7 @@ function App() {
                 )}
 
                 {messages.map((msg, index) => (
+
                   <div key={index} className="mb-5">
 
                     <ChatMessage
@@ -155,17 +149,12 @@ function App() {
                     />
 
                   </div>
+
                 ))}
 
                 {loading && <LoadingSpinner />}
 
               </div>
-
-              {error && (
-                <div className="alert alert-danger">
-                  {error}
-                </div>
-              )}
 
               <InputBar
                 question={question}
@@ -179,8 +168,14 @@ function App() {
           </div>
 
         </div>
-
       </div>
+
+      <ToastContainer
+        position="top-right"
+        autoClose={2500}
+        theme="light"
+      />
+
     </>
   );
 }
