@@ -25,10 +25,6 @@ function App() {
     localStorage.getItem("theme") === "dark"
   );
 
-  /* -------------------------
-      Load History
-  -------------------------- */
-
   useEffect(() => {
 
     const savedHistory =
@@ -48,10 +44,6 @@ function App() {
 
   }, []);
 
-  /* -------------------------
-      Save History
-  -------------------------- */
-
   useEffect(() => {
 
     localStorage.setItem(
@@ -60,10 +52,6 @@ function App() {
     );
 
   }, [messages]);
-
-  /* -------------------------
-      Theme
-  -------------------------- */
 
   useEffect(() => {
 
@@ -81,10 +69,6 @@ function App() {
 
   }, [darkMode]);
 
-  /* -------------------------
-      Clear History
-  -------------------------- */
-
   const clearHistory = () => {
 
     if (!window.confirm("Clear all history?"))
@@ -100,10 +84,6 @@ function App() {
     toast.success("History cleared");
 
   };
-
-  /* -------------------------
-      Ask AI
-  -------------------------- */
 
   const askQuestion = async () => {
 
@@ -189,8 +169,6 @@ function App() {
 
           <div className="row g-4">
 
-            {/* ================= HISTORY ================= */}
-
             <div className="col-lg-3">
 
               <HistorySidebar
@@ -202,15 +180,11 @@ function App() {
 
             </div>
 
-            {/* ================= MAIN CONTENT ================= */}
-
             <div className="col-lg-9">
 
               <div className="card border-0 shadow-sm main-card">
 
                 <div className="card-body">
-
-                  {/* Welcome Screen */}
 
                   {messages.length === 0 && !loading && (
 
@@ -266,13 +240,9 @@ function App() {
 
                   )}
 
-                  {/* Loading */}
-
                   {loading && (
                     <LoadingSpinner />
                   )}
-
-                  {/* Selected Conversation */}
 
                   {!loading &&
                     selectedIndex !== null &&
@@ -345,14 +315,6 @@ function App() {
         </div>
 
       </div>
-            <ToastContainer
-        position="top-right"
-        autoClose={2500}
-        newestOnTop
-        closeOnClick
-        pauseOnHover
-        theme={darkMode ? "dark" : "light"}
-      />
 
     </>
   );
