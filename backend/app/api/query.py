@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from sqlalchemy import text
 import time
 
+from app.core.config import settings
 from app.database.connection import engine
 from app.services.ai_service import generate_sql
 from app.utils.sql_validator import validate_sql
@@ -43,6 +44,6 @@ def query(request: QueryRequest):
         "data": rows,
         "execution_time": execution_time,
         "rows_returned": len(rows),
-        "model": "Gemini 2.5 Flash",
+        "model": settings.gemini_model,
         "status": "Success"
     }

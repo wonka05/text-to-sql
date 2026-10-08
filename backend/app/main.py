@@ -1,7 +1,8 @@
 from fastapi import FastAPI
-from app.api.employee import router as employee_router
-from app.api.query import router as query_router
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.query import router as query_router
+from app.core.config import settings
 
 app = FastAPI(
     title="QueryGenie",
@@ -10,13 +11,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.cors_origins,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
-app.include_router(employee_router)
 app.include_router(query_router)
 
 @app.get("/")

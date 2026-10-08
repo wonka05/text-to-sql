@@ -1,13 +1,11 @@
-import os
 import json
-from dotenv import load_dotenv
 import google.generativeai as genai
 
-load_dotenv()
+from app.core.config import settings
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+genai.configure(api_key=settings.gemini_api_key)
 
-model = genai.GenerativeModel("gemini-2.5-flash")
+model = genai.GenerativeModel(settings.gemini_model)
 
 
 def generate_sql(question: str):
