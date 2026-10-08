@@ -1,0 +1,4 @@
+-r requirements.txt
+
+# Sample data for scripts/setup_db.py
+Faker==40.23.0
