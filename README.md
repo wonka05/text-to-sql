@@ -83,14 +83,18 @@ text-to-sql/
 ├── backend/
 │   ├── app/
 │   │   ├── api/
+│   │   ├── core/          # settings loaded from .env
 │   │   ├── database/
+│   │   ├── models/        # table definitions
 │   │   ├── schemas/
 │   │   ├── services/
 │   │   ├── utils/
 │   │   └── main.py
 │   │
+│   ├── scripts/           # setup_db.py, check_db.py
 │   ├── requirements.txt
-│   └── .env
+│   ├── requirements-dev.txt
+│   └── .env.example
 │
 ├── frontend/
 │   ├── src/
@@ -103,7 +107,6 @@ text-to-sql/
 │   ├── package.json
 │   └── vite.config.js
 │
-├── database.sql
 ├── LICENSE
 └── README.md
 ```
@@ -123,10 +126,13 @@ cd text-to-sql
 
 ## Backend Setup
 
-Create a virtual environment.
+Requires Python 3.10+ and MySQL 8.
+
+Go to the backend folder and create a virtual environment.
 
 ```bash
-python -m venv .venv
+cd backend
+python -m venv venv
 ```
 
 Activate it.
@@ -134,25 +140,31 @@ Activate it.
 Windows
 
 ```bash
-.venv\Scripts\activate
+venv\Scripts\activate
 ```
 
 Linux / macOS
 
 ```bash
-source .venv/bin/activate
+source venv/bin/activate
 ```
 
 Install dependencies.
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
-Create a `.env` file inside the backend directory.
+Copy `.env.example` to `.env` and fill in your Gemini API key, your MySQL admin login and a new password for the app's read-only user.
 
-```env
-GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+```bash
+cp .env.example .env
+```
+
+Create the database, tables, sample data and the read-only user the app connects as.
+
+```bash
+python -m scripts.setup_db
 ```
 
 Start the backend server.
