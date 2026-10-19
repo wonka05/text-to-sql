@@ -1,277 +1,188 @@
-# QueryGenie - AI-Powered Text-to-SQL Assistant
+# QueryGenie: AI Text-to-SQL Assistant
 
-QueryGenie is a full-stack AI application that translates natural language questions into executable MySQL queries using Google's Gemini API. The system validates generated SQL, executes safe read-only queries on a MySQL database, and presents the results through an interactive React interface with charts, execution statistics, and conversation history.
+Ask questions about a MySQL database in plain English. QueryGenie uses **Gemini 2.5 Flash** to turn the question into a SQL query, checks that the query is read-only, runs it, and shows the results as a table and a chart.
 
-The project demonstrates the integration of Large Language Models (LLMs) with modern web technologies to simplify database querying for users without SQL expertise.
-
----
+> "Average salary by department" → `SELECT d.department_name, AVG(e.salary) ... GROUP BY d.department_name` → table + bar chart
 
 ## Features
 
-- Natural language to SQL conversion using Gemini
-- Secure SQL validation (SELECT queries only)
-- MySQL query execution using SQLAlchemy
-- AI-generated SQL explanations
-- Interactive data visualization with Chart.js
-- Query result table with CSV export
-- Conversation history with local persistence
-- Execution statistics and query metadata
-- Syntax-highlighted SQL editor
-- Light and Dark theme support
-- Responsive React interface
-
----
+- **Natural language → SQL**: Gemini writes a MySQL `SELECT` query and a short explanation of what it does
+- **Read-only guard**: only queries that start with `SELECT` are run; queries containing `DELETE`, `DROP`, `UPDATE`, `INSERT`, `ALTER`, `TRUNCATE` or `CREATE` are rejected
+- **Results table** with **CSV export**
+- **Automatic bar chart** when the result has two columns (a label and a number)
+- **Syntax-highlighted SQL** with a copy button
+- **Execution details**: model, response time, rows returned
+- **Query history** sidebar, saved in the browser (localStorage)
 
 ## Tech Stack
 
-### Frontend
+| Layer    | Technologies |
+|----------|--------------|
+| Frontend | React 19, Vite, Bootstrap 5, Chart.js, PapaParse, react-syntax-highlighter, react-toastify |
+| Backend  | Python, FastAPI, Uvicorn, Pydantic |
+| Database | MySQL, SQLAlchemy 2.0, PyMySQL |
+| AI       | Google Gemini 2.5 Flash (`google-generativeai`) |
 
-- React
-- Vite
-- Bootstrap 5
-- React Icons
-- React Toastify
-- Chart.js
-- React Chart.js 2
-- React Syntax Highlighter
-- PapaParse
+## How It Works
 
-### Backend
-
-- FastAPI
-- SQLAlchemy
-- MySQL
-- Google Gemini API
-- python-dotenv
-- Uvicorn
-
----
-
-## Architecture
-
-```text
-                User
-                  │
-                  ▼
-        React Frontend (Vite)
-                  │
-                  ▼
-          FastAPI REST API
-                  │
-        SQL Generation (Gemini)
-                  │
-                  ▼
-         SQL Validation Layer
-                  │
-                  ▼
-        SQLAlchemy + MySQL
-                  │
-                  ▼
-          Query Results
-                  │
-                  ▼
- React Tables • Charts • CSV Export
-```
-
----
+1. The React app sends the question to `POST /query`.
+2. The backend builds a prompt containing the database schema and rules (SELECT only, JSON output).
+3. Gemini returns `{ "sql": "...", "explanation": "..." }`.
+4. The SQL validator checks that the query is read-only.
+5. The query runs on MySQL through SQLAlchemy, and the rows go back to the frontend along with the SQL, the explanation and execution stats.
 
 ## Project Structure
 
-```text
-text-to-sql/
-│
+```
+AI-SQL-Assistant/
 ├── backend/
 │   ├── app/
-│   │   ├── api/
-│   │   ├── database/
-│   │   ├── schemas/
-│   │   ├── services/
-│   │   ├── utils/
-│   │   └── main.py
-│   │
-│   ├── requirements.txt
-│   └── .env
-│
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── layout/
-│   │   ├── services/
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   │
-│   ├── package.json
-│   └── vite.config.js
-│
-├── database.sql
-├── LICENSE
-└── README.md
+│   │   ├── main.py               # FastAPI app, CORS, routers
+│   │   ├── api/                  # Routes: /query, /employees
+│   │   ├── services/ai_service.py # Prompt + Gemini call
+│   │   ├── utils/sql_validator.py # Read-only SQL check
+│   │   ├── database/             # Engine, session, connection
+│   │   ├── models/               # SQLAlchemy models (6 tables)
+│   │   └── schemas/              # Request models
+│   ├── scripts/seed_database.py  # Generates sample employees (Faker)
+│   ├── datab.sql                 # Database schema
+│   └── requirements.txt
+└── frontend/
+    └── src/
+        ├── App.jsx               # State and page layout
+        ├── components/           # SQL card, results table, history, etc.
+        └── services/api.js       # API calls
 ```
 
----
+## Database
 
-## Installation
+The schema in `backend/datab.sql` creates the `ai_data_analyst` database with six tables:
 
-### Clone Repository
+- **HR**: `departments`, `employees`
+- **Sales**: `customers`, `products`, `orders`, `order_items`
+
+Relationships: `employees → departments`, `orders → customers`, `order_items → orders` and `order_items → products`.
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.10+
+- Node.js 20.19+ or 22.12+
+- MySQL
+- A Gemini API key from [Google AI Studio](https://aistudio.google.com/)
+
+### 1. Set up the database
 
 ```bash
-git clone https://github.com/wonka05/text-to-sql.git
-cd text-to-sql
+mysql -u root -p < backend/datab.sql
 ```
 
----
+Add some departments first (the employee seeder assigns `department_id` 1–8), then seed 100 sample employees:
 
-## Backend Setup
-
-Create a virtual environment.
-
-```bash
-python -m venv .venv
+```sql
+INSERT INTO departments (department_name) VALUES
+('Engineering'), ('Sales'), ('Marketing'), ('Finance'),
+('HR'), ('Operations'), ('Support'), ('Product');
 ```
 
-Activate it.
-
-Windows
-
 ```bash
-.venv\Scripts\activate
+cd backend
+python scripts/seed_database.py
 ```
 
-Linux / macOS
+> The seeder only fills `employees`. Add rows to `customers`, `products`, `orders` and `order_items` if you want to query the sales tables.
+
+### 2. Run the backend
 
 ```bash
-source .venv/bin/activate
-```
-
-Install dependencies.
-
-```bash
+cd backend
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Create a `.env` file inside the backend directory.
+Create `backend/.env`:
 
-```env
-GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+```
+GEMINI_API_KEY=your_api_key_here
 ```
 
-Start the backend server.
+Set your MySQL username and password in `DATABASE_URL` in `backend/app/database/connection.py`:
+
+```python
+DATABASE_URL = "mysql+pymysql://<user>:<password>@localhost/ai_data_analyst"
+```
+
+Start the server:
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-Backend runs at
+The API runs at `http://127.0.0.1:8000`, with interactive docs at `http://127.0.0.1:8000/docs`.
 
-```
-http://127.0.0.1:8000
-```
-
-Swagger documentation
-
-```
-http://127.0.0.1:8000/docs
-```
-
----
-
-## Frontend Setup
-
-Navigate to the frontend folder.
+### 3. Run the frontend
 
 ```bash
 cd frontend
-```
-
-Install dependencies.
-
-```bash
 npm install
 ```
 
-Start the development server.
+Create `frontend/.env`:
+
+```
+VITE_API_URL=http://127.0.0.1:8000
+```
 
 ```bash
 npm run dev
 ```
 
-Frontend runs at
+Open `http://localhost:5173`. The backend's CORS settings only allow this origin.
 
-```
-http://localhost:5173
-```
+## API
 
----
+### `POST /query`
 
-## Example Queries
+Request:
 
-```
-Highest paid employee
-
-Average salary by department
-
-Products with low stock
-
-Top 5 customers by total purchase amount
-
-Employees hired after 2023
-
-Total orders placed this month
+```json
+{ "question": "Average salary by department" }
 ```
 
----
+Response (example):
 
-## Security
-
-To reduce the risk of unsafe SQL execution, the backend validates every AI-generated query before execution.
-
-Current restrictions include:
-
-- Only SELECT statements are allowed
-- Data modification statements are rejected
-- Schema changes are blocked
-- Potentially destructive SQL is prevented from execution
-
----
-
-## Future Improvements
-
-- Authentication and user accounts
-- Multi-database support
-- PostgreSQL support
-- Schema-aware prompt generation
-- Query optimization suggestions
-- Saved queries
-- Query sharing
-- Database schema explorer
-- Docker deployment
-- Cloud deployment
-
----
-
-## Contributing
-
-Contributions are welcome.
-
-1. Fork the repository.
-2. Create a new branch.
-
-```bash
-git checkout -b feature-name
+```json
+{
+  "question": "Average salary by department",
+  "sql": "SELECT d.department_name, AVG(e.salary) AS average_salary FROM employees e JOIN departments d ON e.department_id = d.department_id GROUP BY d.department_name;",
+  "explanation": "Calculates the average salary for each department.",
+  "data": [{ "department_name": "Engineering", "average_salary": 91250.5 }],
+  "execution_time": 1843.27,
+  "rows_returned": 8,
+  "model": "Gemini 2.5 Flash",
+  "status": "Success"
+}
 ```
 
-3. Commit your changes.
+`execution_time` is in milliseconds and includes the Gemini call. If the generated SQL fails the safety check, the response is `{ "error": "Unsafe SQL generated." }`.
 
-```bash
-git commit -m "Add new feature"
-```
+### Other endpoints
 
-4. Push the branch.
+- `GET /`: welcome message
+- `GET /employees`: all employees (SQLAlchemy ORM)
 
-```bash
-git push origin feature-name
-```
+## Example Questions
 
-5. Open a Pull Request.
+- Highest paid employee
+- Average salary by department
+- Products with low stock
+- Top 5 customers by total spend
+- Employees hired in the last year
 
----
+## Notes
+
+- AI-generated SQL can be wrong; check the generated query and explanation.
+- The keyword check is a basic safeguard. For anything beyond local use, connect with a **read-only MySQL user** (SELECT privilege only).
+- Never commit `.env` files or database passwords.
