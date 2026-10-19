@@ -1,16 +1,31 @@
-# React + Vite
+# Querent frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + Vite single-page app for Querent. See the
+[project README](../README.md) for setup and
+[docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) for how it fits together.
 
-Currently, two official plugins are available:
+```bash
+npm install
+cp .env.example .env    # VITE_API_URL=http://127.0.0.1:8000
+npm run dev             # http://localhost:5173
+npm test                # Vitest: conversation storage, result presentation, API client
+npm run lint
+npm run build
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+`VITE_API_URL` is compiled into the bundle and visible to anyone, so never put
+secrets in a `VITE_*` variable.
 
-## React Compiler
+## Layout
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+| Path | Contents |
+|---|---|
+| `src/App.jsx` | Conversations, the single in-flight request (with cancel), theme, health polling |
+| `src/services/api.js` | `fetch` wrapper; failures become `ApiError` with a `code` (`network`, `timeout`, `cancelled`, or the backend's error code) |
+| `src/lib/conversations.js` | localStorage format, migration from the first version's history, follow-up context |
+| `src/lib/results.js` | Whether a result is a single number, a chart or a table; number formatting |
+| `src/components/Turn.jsx` | One question and its answer, rendered per backend `status` |
+| `src/components/ResultView.jsx` | Table / chart switch, truncation notice, CSV, refresh |
+| `src/components/ResultChart.jsx` | Chart.js bar or line, one measure at a time (loaded on demand) |
+| `src/components/SqlPanel.jsx` | Generated vs executed SQL, copy, edit and run |
+| `src/components/SchemaExplorer.jsx` | Live schema with keys, relationships and value hints |

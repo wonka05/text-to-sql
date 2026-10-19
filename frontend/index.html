@@ -1,10 +1,21 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <meta name="description" content="Ask questions about a MySQL database in plain English." />
+    <title>Querent: ask your database in plain English</title>
+    <script>
+      // Apply the saved theme before the app renders, so dark mode doesn't flash light first
+      try {
+        var theme = localStorage.getItem("theme");
+        if (theme !== "dark" && theme !== "light") {
+          theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+        document.documentElement.dataset.bsTheme = theme;
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

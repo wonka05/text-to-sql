@@ -1,32 +1,54 @@
-import {
-  BsDatabase,
-  BsMoonStars,
-  BsSun,
-  BsGithub,
-} from "react-icons/bs";
+import { BsDatabase, BsDiagram3, BsMoonStars, BsSun } from "react-icons/bs";
 
-function Navbar({ darkMode, setDarkMode }) {
+function StatusBadge({ health }) {
+  const states = {
+    checking: { dot: "bg-secondary", text: "Checking connection..." },
+    ok: { dot: "bg-success", text: "Database connected" },
+    degraded: { dot: "bg-danger", text: "Database unavailable" },
+    offline: { dot: "bg-danger", text: "API unreachable" },
+  };
+  const { dot, text } = states[health.state] || states.checking;
+  const title = health.error || (health.model ? `Model: ${health.model}` : undefined);
+
   return (
-    <nav className="navbar navbar-expand-lg shadow-sm">
+    <span className="status-badge" title={title} role="status" aria-live="polite">
+      <span className={`status-dot ${dot}`} aria-hidden="true" />
+      <span className="d-none d-sm-inline">{text}</span>
+      {health.model && <span className="text-body-secondary d-none d-md-inline"> · {health.model}</span>}
+    </span>
+  );
+}
 
-      <div className="container">
+function Navbar({ theme, onToggleTheme, health, onOpenSchema }) {
+  const dark = theme === "dark";
+  return (
+    <nav className="navbar border-bottom bg-body sticky-top">
+      <div className="container-fluid px-3 px-lg-4 gap-2">
+        <span className="navbar-brand d-flex align-items-center gap-2 me-auto">
+          <BsDatabase className="text-primary" size={24} aria-hidden="true" />
+          <strong>Querent</strong>
+          <small className="text-body-secondary fw-normal fs-6 d-none d-md-inline">
+            ask your database in plain English
+          </small>
+        </span>
 
-        <a
-          href="/"
-          className="navbar-brand d-flex align-items-center"
+        <StatusBadge health={health} />
+
+        <button type="button" className="btn btn-sm btn-outline-secondary" onClick={onOpenSchema}>
+          <BsDiagram3 className="me-1" aria-hidden="true" />
+          Schema
+        </button>
+
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-secondary"
+          onClick={onToggleTheme}
+          aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
+          title={dark ? "Light theme" : "Dark theme"}
         >
-          <BsDatabase
-            className="me-2 text-primary"
-            size={28}
-          />
-
-          <strong>QueryGenie</strong>
-        </a>
-
-        
-
+          {dark ? <BsSun aria-hidden="true" /> : <BsMoonStars aria-hidden="true" />}
+        </button>
       </div>
-
     </nav>
   );
 }
