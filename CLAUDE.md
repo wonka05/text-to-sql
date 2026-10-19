@@ -4,11 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-QueryGenie: a natural-language-to-SQL assistant. A user types a question, Gemini 2.5 Flash produces a MySQL `SELECT`, the backend runs it against a local MySQL database, and the React UI shows the SQL, an explanation, execution stats, a results table, and (sometimes) a bar chart.
+Querent (formerly QueryGenie): a natural-language-to-SQL assistant. Internal identifiers keep the old name on purpose: the DB account `querygenie_ro`, the test databases, and the localStorage keys (renaming them would break existing logins and saved conversations). Gemini writes one MySQL `SELECT` (or asks for clarification, or says the question is unsupported), a sqlglot-based guard checks it, the backend runs it on a read-only connection, and the React UI shows results, the SQL, assumptions and any self-corrections.
 
-- `backend/`: FastAPI + SQLAlchemy + PyMySQL + `google-generativeai`
-- `frontend/`: React 19 + Vite + Bootstrap/react-bootstrap + Chart.js
-- `database/` and `docs/` are empty placeholders. `frontend/README.md` is the stock Vite template.
+- `backend/`: FastAPI + SQLAlchemy + PyMySQL + `google-genai` + sqlglot
+- `frontend/`: React 19 + Vite + Bootstrap 5.3 + Chart.js
+- `docs/`: ARCHITECTURE.md (request flow, safety layers, data contract), DECISIONS.md (why), EVALUATION.md (harness and results)
+- `database/` is an empty placeholder.
 
 ## Workflow
 
@@ -19,11 +20,17 @@ Never commit to, merge into, or rewrite `main`. Do all work on a new branch and 
 Backend (run from `backend/` with the venv in `backend/venv` active; imports are rooted at `app.`, so the working directory matters):
 
 ```bash
-pip install -r requirements-dev.txt          # runtime deps (requirements.txt) + Faker for seeding
+pip install -r requirements-dev.txt          # runtime deps + Faker, pytest, httpx2, ruff
 python -m scripts.setup_db                   # create DB, tables, sample data and the read-only app user
 python -m scripts.setup_db --reset           # drop all tables and rebuild with fresh sample data
-python -m scripts.check_db                   # show which account the app connects as, its grants, row counts
+python -m scripts.check_db                   # account, grants, session settings, row counts, schema the model sees
 uvicorn app.main:app --reload                # API on http://127.0.0.1:8000 (docs at /docs)
+pytest                                       # unit tests (no DB, no API key)
+QG_TEST_MYSQL_ADMIN_URL=mysql+pymysql://root:PW@127.0.0.1:3306 pytest   # + MySQL integration tests
+pytest tests/unit/test_sql_guard.py -k restricted                        # single test file / test
+ruff check app tests evals scripts
+python -m evals.run --gold                   # eval harness self-check, no model calls
+python -m evals.run                          # real eval: ~60 Gemini calls; needs the user's OK (costs quota)
 ```
 
 Frontend (run from `frontend/`):
@@ -31,47 +38,47 @@ Frontend (run from `frontend/`):
 ```bash
 npm install
 npm run dev       # Vite on http://localhost:5173
-npm run build
+npm test          # Vitest (src/lib, src/services)
 npm run lint      # ESLint (flat config in eslint.config.js)
+npm run build
 ```
 
-There is no automated test suite yet: no pytest and no JS tests.
+CI (`.github/workflows/ci.yml`) runs ruff, pytest with a MySQL 8 service, `evals.run --gold`, and frontend lint/test/build.
 
 ## Configuration
 
-- All backend settings live in `app/core/config.py` (`pydantic-settings`), read from environment variables or the gitignored `backend/.env` (template: `.env.example`). Missing required values fail at startup. Import `settings` from there; never call `os.getenv` or put credentials in code.
+- All backend settings live in `app/core/config.py` (`pydantic-settings`), read from environment variables or the gitignored `backend/.env` (template: `.env.example`). Use `get_settings()`; never call `os.getenv` or put credentials in code. Tests build `Settings(_env_file=None, ...)` directly.
 - **Real environment variables override `.env`.** This machine has a Windows user-level `DB_PASSWORD` variable that silently replaces the `.env` value; if the app can't log in, check `[Environment]::GetEnvironmentVariable('DB_PASSWORD','User')`.
 - Two DB accounts: the app connects as `DB_USER` (`querygenie_ro`, SELECT-only on `DB_NAME`, created by `setup_db`). `DB_ADMIN_USER`/`DB_ADMIN_PASSWORD` are used only by `scripts/setup_db.py` and must never be set on a server.
+- The integration-test fixture creates its own `querygenie_test` database and `querygenie_pytest_ro` user on whatever server `QG_TEST_MYSQL_ADMIN_URL` points at, and refuses database names not ending in `_test`.
 - `ALLOWED_ORIGINS` (comma-separated) controls CORS; default `http://localhost:5173`.
-- `frontend/.env` needs `VITE_API_URL` (e.g. `http://127.0.0.1:8000`). There is no Vite proxy; the frontend calls the backend directly. Anything in a `VITE_*` variable is public in the browser bundle.
+- `frontend/.env` needs `VITE_API_URL` (e.g. `http://127.0.0.1:8000`). There is no Vite proxy. Anything in a `VITE_*` variable is public in the browser bundle.
 
 ## Architecture
 
-### Request flow (`POST /query`)
+### Request flow (`POST /query`), in `app/services/pipeline.py`
 
-`frontend/src/services/api.js` → `backend/app/api/query.py`:
+1. `CatalogProvider.get()` returns the live schema (`services/catalog.py`): tables, columns, PK/FK, value lists of small text columns, date/number ranges. Cached for `SCHEMA_CACHE_SECONDS`; reloaded early when MySQL reports a missing table/column (1054/1146).
+2. `prompts.build_prompt` combines the schema, today's date, the last 4 turns the client sent, and the question. `SYSTEM_PROMPT` holds the rules.
+3. `GeminiClient.generate` (`services/llm.py`) asks for JSON matching `REPLY_SCHEMA`: `kind` is `sql`, `clarification` or `unsupported`. `parse_reply` validates it with Pydantic.
+4. `sql_guard.check_query` parses with sqlglot and walks the AST (single SELECT/UNION/CTE; no writes, INTO, locks, hints, variables, placeholders, `/*!` comments, forbidden functions, other schemas, unknown tables/columns, restricted columns). It returns **re-generated, pretty-printed SQL with `LIMIT max_rows+1`**; that, not the model's text, is what runs.
+5. `QueryExecutor.run` (`services/executor.py`) runs it with `exec_driver_sql(..., no_parameters=True)` so `%` and `:name` aren't treated as bind params, fetches `max_rows+1`, converts values to JSON types, and classifies MySQL errors (timeout 3024 and permission errors are not repairable).
+6. On a repairable guard or DB error, the pipeline sends a repair prompt with the error, up to `MAX_REPAIR_ATTEMPTS`. Repaired SQL goes through the same guard.
 
-1. `services/ai_service.generate_sql(question)` puts the question into a prompt and calls Gemini. It runs `json.loads` on the raw response text and expects `{"sql": ..., "explanation": ...}`. Gemini output that is not valid JSON (e.g. fenced in markdown) is not caught and surfaces as a 500.
-2. `utils/sql_validator.validate_sql` requires the SQL to start with `SELECT`. It then rejects any SQL whose uppercased text contains a forbidden keyword (`DELETE`, `DROP`, `UPDATE`, `INSERT`, `ALTER`, `TRUNCATE`, `CREATE`). This is a raw substring match, so identifiers such as `created_at` or `updated_by` would also be rejected.
-3. The SQL runs via `engine.connect()` + `text(sql)`. Rows come back as `result.mappings().all()`.
-4. The response contains `question, sql, explanation, data, execution_time, rows_returned, model, status`. `execution_time` covers the whole request, Gemini call included. `model` is `settings.gemini_model`.
+Pipeline outcomes are HTTP 200 with `status` in `answered | clarification | unsupported | rejected | failed`. Infrastructure problems raise `AppError` subclasses (`core/errors.py`), which become `{"error": {"code", "message"}}` with 422/413/429/502/503. A middleware registered before CORS turns unexpected exceptions into JSON 500s that keep CORS headers.
 
-Unsafe SQL returns **HTTP 200** with `{"error": "..."}` rather than an error status. `api.js` treats either `!response.ok` or `data.error` as a failure.
+Every DB session is `READ ONLY` with `max_execution_time` (`database/connection.py`, set in a pool `connect` event). `POST /sql` runs user-written SQL through the same guard without calling the model. `ReplyCache` reuses model replies for identical (model, schema fingerprint, question, history) keys; the SQL is still re-checked and re-run.
 
-### The schema is defined in two places
+### The schema the app queries
 
-When you add or change a table or column, keep both in sync:
-
-- `backend/app/models/*.py`: the source of truth. `scripts/setup_db.py` creates the tables from these models (`Base.metadata.create_all`); there is no `.sql` DDL file. `/query` executes raw SQL and does not use the models at runtime.
-- The prompt string in `backend/app/services/ai_service.py`: the schema the LLM sees. Gemini can only query tables and columns listed here.
+- `backend/app/models/*.py` define the sample tables; `scripts/setup_db.py` creates them (`Base.metadata.create_all`) and fills them with `build_rows()`, which uses a fixed seed so every reset is identical (dates end 2026-09-30). Keep it deterministic: `evals/questions.json` gold answers depend on it.
+- The app itself does **not** use the models at runtime: the prompt and guard use the live catalog, so a new table or column is picked up automatically (after the cache TTL). After changing the sample schema, check `evals/questions.json` and run `python -m evals.run --gold`.
 
 Tables: `departments`, `employees`, `customers`, `products`, `orders`, `order_items`.
 
-Sample data comes from `build_rows()` in `scripts/setup_db.py`, generated with a fixed seed so every reset produces identical rows (dates are fixed, ending 2026-09-30). Keep it deterministic: benchmark answers depend on it.
-
 ### Frontend
 
-- All state lives in `App.jsx`, with no router or state library. The message list is persisted to `localStorage["querygenie-history"]` and the theme to `localStorage["theme"]`.
-- `App.jsx` maps the snake_case API fields to camelCase when it stores a message (`execution_time` → `executionTime`, `rows_returned` → `rowsReturned`). Already-saved history uses the camelCase shape, so changing these field names breaks old entries.
-- `components/ResultsTable.jsx` handles CSV export (PapaParse) and charting. It renders a Chart.js `Bar` chart only when the result has exactly 2 columns, the first value is a string, and the second is numeric.
-- Dark mode works by toggling the `dark-mode` class on `<body>`. The overrides are `body.dark-mode ...` rules in `src/index.css`.
+- State lives in `App.jsx` (no router or state library). Conversations are stored in `localStorage["querygenie-conversations"]` as `{conversations, activeId}`. Each turn keeps the API's `QueryResponse` unchanged (snake_case). `lib/conversations.js` migrates the old `localStorage["querygenie-history"]` format once and trims stored results to 100 rows.
+- `buildHistory` sends the last 4 finished turns as `{question, sql, reply}` with each question. "New" starts a conversation with no context.
+- Results are `{columns: [{name, type}], rows: [[...]]}` (arrays, so duplicate column names survive). `lib/results.js` decides scalar tile vs chart vs table; `ResultChart` (lazy-loaded Chart.js) plots one measure at a time.
+- Theme is Bootstrap's `data-bs-theme` on `<html>`, set by an inline script in `index.html` before render and by `App.jsx` afterwards. Custom CSS in `src/index.css` uses Bootstrap CSS variables only.

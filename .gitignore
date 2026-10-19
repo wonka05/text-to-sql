@@ -64,3 +64,7 @@ Thumbs.db
 
 coverage/
 .pytest_cache/
+.ruff_cache/
+
+# Evaluation run reports (backend/evals/reports)
+reports/
