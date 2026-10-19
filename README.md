@@ -75,7 +75,8 @@ flowchart LR
    fixable failure goes back to the model once.
 
 More detail: [architecture](docs/ARCHITECTURE.md) ·
-[design decisions](docs/DECISIONS.md) · [evaluation](docs/EVALUATION.md)
+[design decisions](docs/DECISIONS.md) · [evaluation](docs/EVALUATION.md) ·
+[deployment](docs/DEPLOYMENT.md)
 
 ## Engineering highlights
 

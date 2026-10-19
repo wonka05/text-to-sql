@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     db_name: str
     db_user: str
     db_password: str
+    # TLS for cloud MySQL (e.g. Aiven): the server's CA certificate, either a
+    # file path or the PEM text itself. Empty means an unencrypted connection,
+    # which is fine for a local database only.
+    db_ssl_ca: str | None = None
+    # Also check that the certificate matches DB_HOST
+    db_ssl_verify_hostname: bool = True
 
     # Admin account, used only by scripts/setup_db.py. Never set on the server.
     db_admin_user: str | None = None

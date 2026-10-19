@@ -1,0 +1,36 @@
+# Render Blueprint for the Querent API. See docs/DEPLOYMENT.md.
+# Values marked `sync: false` are secrets you type into the Render dashboard.
+services:
+  - type: web
+    name: querent-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # --proxy-headers: behind Render's proxy, use the visitor's IP for the rate limit
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips "*"
+    healthCheckPath: /health
+    envVars:
+      # The version the tests run on
+      - key: PYTHON_VERSION
+        value: 3.10.13
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_NAME
+        value: ai_data_analyst
+      - key: DB_USER
+        value: querygenie_ro
+      - key: DB_PASSWORD
+        sync: false
+      # Paste the database's CA certificate (the whole -----BEGIN ... END----- text)
+      - key: DB_SSL_CA
+        sync: false
+      # Your Vercel URL, e.g. https://querent.vercel.app (no trailing slash)
+      - key: ALLOWED_ORIGINS
+        sync: false

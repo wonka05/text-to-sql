@@ -18,7 +18,7 @@ from sqlalchemy import create_engine, func, select, text
 
 from app.core.config import get_settings
 from app.database.base import Base
-from app.database.connection import database_url
+from app.database.connection import database_url, ssl_connect_args
 from app.models import Customer, Department, Employee, Order, OrderItem, Product
 
 # A fixed seed makes every run produce identical data, so answers to
@@ -252,12 +252,15 @@ def main() -> None:
 
     admin = (settings.db_admin_user, settings.db_admin_password)
 
-    server = create_engine(database_url(settings, *admin, database=None))
+    tls = ssl_connect_args(settings)
+    server = create_engine(database_url(settings, *admin, database=None), connect_args=tls)
     with server.begin() as conn:
         conn.execute(text(f"CREATE DATABASE IF NOT EXISTS `{settings.db_name}`"))
     server.dispose()
 
-    engine = create_engine(database_url(settings, *admin, database=settings.db_name))
+    engine = create_engine(
+        database_url(settings, *admin, database=settings.db_name), connect_args=tls
+    )
     for table, count in create_tables_and_data(engine, reset=args.reset).items():
         print(f"  {table:<12} {count} rows")
 

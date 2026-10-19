@@ -107,5 +107,26 @@ class TestSettings:
         with pytest.raises(ValueError):
             _ = self.base(restricted_columns="salary").restricted_column_set
 
+    def test_no_ca_means_no_tls_arguments(self):
+        from app.database.connection import ssl_connect_args
+
+        assert ssl_connect_args(self.base()) == {}
+
+    def test_ca_given_as_pem_text_is_written_to_a_file(self):
+        from pathlib import Path
+
+        from app.database.connection import ssl_connect_args
+
+        pem = "-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----"
+        args = ssl_connect_args(self.base(db_ssl_ca=pem))
+        assert Path(args["ssl_ca"]).read_text().strip() == pem
+        assert args["ssl_verify_cert"] is True and args["ssl_verify_identity"] is True
+
+    def test_ca_given_as_a_path_is_used_directly(self):
+        from app.database.connection import ssl_connect_args
+
+        args = ssl_connect_args(self.base(db_ssl_ca="/etc/ca.pem", db_ssl_verify_hostname=False))
+        assert args == {"ssl_ca": "/etc/ca.pem", "ssl_verify_cert": True, "ssl_verify_identity": False}
+
     def test_cors_origins_split(self):
         assert self.base(allowed_origins="http://a, http://b").cors_origins == ["http://a", "http://b"]

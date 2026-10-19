@@ -1,3 +1,7 @@
+import re
+import tempfile
+from pathlib import Path
+
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import URL, Engine
 
@@ -20,6 +24,35 @@ def database_url(
         database=database,
         query={"charset": "utf8mb4"},
     )
+
+
+def _normalize_pem(text: str) -> str:
+    """Rebuild PEM line breaks, which pasting into a one-line field can remove."""
+    blocks = re.findall(r"-----BEGIN ([A-Z ]+)-----(.*?)-----END \1-----", text, re.DOTALL)
+    out = []
+    for label, body in blocks:
+        b64 = "".join(body.split())
+        lines = [b64[i:i + 64] for i in range(0, len(b64), 64)]
+        out.append("\n".join([f"-----BEGIN {label}-----", *lines, f"-----END {label}-----"]))
+    return "\n".join(out) + "\n"
+
+
+def ssl_connect_args(settings: Settings) -> dict:
+    """PyMySQL arguments that turn on TLS with certificate verification."""
+    ca = (settings.db_ssl_ca or "").strip()
+    if not ca:
+        return {}
+    if ca.startswith("-----BEGIN"):
+        # Hosting dashboards make it easier to paste the PEM text than to
+        # upload a file, so write it to a file for the driver
+        path = Path(tempfile.gettempdir()) / "querent-db-ca.pem"
+        path.write_text(_normalize_pem(ca), encoding="ascii")
+        ca = str(path)
+    return {
+        "ssl_ca": ca,
+        "ssl_verify_cert": True,
+        "ssl_verify_identity": settings.db_ssl_verify_hostname,
+    }
 
 
 def create_query_engine(settings: Settings) -> Engine:
@@ -45,6 +78,7 @@ def create_query_engine(settings: Settings) -> Engine:
             # Backstop in case the server-side limit never fires (e.g. network hang)
             "read_timeout": int(settings.query_timeout_seconds) + 10,
             "write_timeout": 10,
+            **ssl_connect_args(settings),
         },
     )
 

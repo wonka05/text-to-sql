@@ -82,6 +82,8 @@ export function getSchema() {
   return request("/schema");
 }
 
+// Free hosting plans put the backend to sleep when idle; the first request
+// can take up to a minute while it wakes, so wait rather than report it down
 export function getHealth() {
-  return request("/health", { timeoutMs: 8_000 });
+  return request("/health", { timeoutMs: 75_000 });
 }
