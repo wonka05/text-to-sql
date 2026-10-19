@@ -16,7 +16,7 @@ from decimal import Decimal
 from faker import Faker
 from sqlalchemy import create_engine, func, select, text
 
-from app.core.config import settings
+from app.core.config import get_settings
 from app.database.base import Base
 from app.database.connection import database_url
 from app.models import Customer, Department, Employee, Order, OrderItem, Product
@@ -186,23 +186,12 @@ def build_rows() -> list[tuple[type, list[dict]]]:
     ]
 
 
-def create_read_only_user(engine) -> None:
-    """Create (or update) the app's account with SELECT access only."""
-    if settings.db_user == settings.db_admin_user:
-        print(
-            "WARNING: DB_USER is the admin account, so the app is NOT read-only.\n"
-            "         Set DB_USER/DB_PASSWORD to a separate user and run this again."
-        )
-        return
-
-    if len(settings.db_password) < 12:
+def create_read_only_user(engine, database: str, user: str, password: str) -> None:
+    """Create (or update) an account with SELECT access to one database only."""
+    if len(password) < 12:
         sys.exit("DB_PASSWORD must be at least 12 characters for the app's user.")
 
-    account = {
-        "user": settings.db_user,
-        "host": "%",
-        "password": settings.db_password,
-    }
+    account = {"user": user, "host": "%", "password": password}
     with engine.begin() as conn:
         conn.execute(
             text("CREATE USER IF NOT EXISTS :user@:host IDENTIFIED BY :password"),
@@ -211,40 +200,15 @@ def create_read_only_user(engine) -> None:
         conn.execute(text("ALTER USER :user@:host IDENTIFIED BY :password"), account)
         # Start from zero privileges, then allow reading this one database only
         conn.execute(text("REVOKE ALL PRIVILEGES, GRANT OPTION FROM :user@:host"), account)
-        conn.execute(
-            text(f"GRANT SELECT ON `{settings.db_name}`.* TO :user@:host"),
-            account,
-        )
-
-    print(f"Read-only user '{settings.db_user}' can SELECT from '{settings.db_name}' only.")
+        conn.execute(text(f"GRANT SELECT ON `{database}`.* TO :user@:host"), account)
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument(
-        "--reset",
-        action="store_true",
-        help="drop all tables and rebuild them with fresh sample data",
-    )
-    args = parser.parse_args()
+def create_tables_and_data(engine, reset: bool = False) -> dict[str, int]:
+    """Create missing tables and fill them if they are all empty.
 
-    if not settings.db_admin_user or not settings.db_admin_password:
-        sys.exit("Set DB_ADMIN_USER and DB_ADMIN_PASSWORD in backend/.env first.")
-
-    # The name goes into SQL as an identifier, so allow only safe characters
-    if not re.fullmatch(r"\w+", settings.db_name):
-        sys.exit("DB_NAME may only contain letters, numbers and underscores.")
-
-    admin = (settings.db_admin_user, settings.db_admin_password)
-
-    server = create_engine(database_url(*admin, database=None))
-    with server.begin() as conn:
-        conn.execute(text(f"CREATE DATABASE IF NOT EXISTS `{settings.db_name}`"))
-    server.dispose()
-
-    engine = create_engine(database_url(*admin))
-
-    if args.reset:
+    Returns the row count of each table afterwards.
+    """
+    if reset:
         Base.metadata.drop_all(engine)
         print("Dropped all tables.")
     Base.metadata.create_all(engine)
@@ -263,11 +227,50 @@ def main() -> None:
             for model, rows in build_rows():
                 conn.execute(model.__table__.insert(), rows)
 
-        for table in tables:
-            count = conn.execute(select(func.count()).select_from(table)).scalar()
-            print(f"  {table.name:<12} {count} rows")
+        return {
+            table.name: conn.execute(select(func.count()).select_from(table)).scalar()
+            for table in tables
+        }
 
-    create_read_only_user(engine)
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="drop all tables and rebuild them with fresh sample data",
+    )
+    args = parser.parse_args()
+    settings = get_settings()
+
+    if not settings.db_admin_user or not settings.db_admin_password:
+        sys.exit("Set DB_ADMIN_USER and DB_ADMIN_PASSWORD in backend/.env first.")
+
+    # The name goes into SQL as an identifier, so allow only safe characters
+    if not re.fullmatch(r"\w+", settings.db_name):
+        sys.exit("DB_NAME may only contain letters, numbers and underscores.")
+
+    admin = (settings.db_admin_user, settings.db_admin_password)
+
+    server = create_engine(database_url(settings, *admin, database=None))
+    with server.begin() as conn:
+        conn.execute(text(f"CREATE DATABASE IF NOT EXISTS `{settings.db_name}`"))
+    server.dispose()
+
+    engine = create_engine(database_url(settings, *admin, database=settings.db_name))
+    for table, count in create_tables_and_data(engine, reset=args.reset).items():
+        print(f"  {table:<12} {count} rows")
+
+    if settings.db_user == settings.db_admin_user:
+        print(
+            "WARNING: DB_USER is the admin account, so the app is NOT read-only.\n"
+            "         Set DB_USER/DB_PASSWORD to a separate user and run this again."
+        )
+    else:
+        create_read_only_user(engine, settings.db_name, settings.db_user, settings.db_password)
+        print(
+            f"Read-only user '{settings.db_user}' can SELECT from '{settings.db_name}' only."
+        )
     engine.dispose()
 
 

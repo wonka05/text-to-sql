@@ -1,49 +1,29 @@
-from fastapi import APIRouter
-from sqlalchemy import text
-import time
+from fastapi import APIRouter, Depends
 
-from app.core.config import settings
-from app.database.connection import engine
-from app.services.ai_service import generate_sql
-from app.utils.sql_validator import validate_sql
-from app.schemas.query import QueryRequest
+from app.api.deps import Services, enforce_rate_limit, get_services
+from app.schemas.query import QueryRequest, QueryResponse, SqlRequest
+from app.services.prompts import HistoryTurn
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(enforce_rate_limit)])
 
 
-@router.post("/query")
-def query(request: QueryRequest):
-    question = request.question
+@router.post("/query", response_model=QueryResponse)
+def ask_question(request: QueryRequest, services: Services = Depends(get_services)):
+    """Answer a natural-language question with a generated, checked SQL query.
 
-    # Start timer
-    start_time = time.perf_counter()
+    Every outcome of the pipeline (answered, clarification, unsupported,
+    rejected, failed) is a 200 response with a `status`. Non-200 responses
+    mean the request itself could not be handled: invalid input (422), rate
+    limit (429), or the model or database being unavailable (502/503).
+    """
+    history = [
+        HistoryTurn(question=turn.question, sql=turn.sql, reply=turn.reply)
+        for turn in request.history
+    ]
+    return services.pipeline.ask(request.question, history)
 
-    ai_response = generate_sql(question)
 
-    sql = ai_response["sql"]
-    explanation = ai_response["explanation"]
-
-    if not validate_sql(sql):
-        return {
-            "error": "Unsafe SQL generated."
-        }
-
-    with engine.connect() as conn:
-        result = conn.execute(text(sql))
-        rows = result.mappings().all()
-
-    # End timer
-    end_time = time.perf_counter()
-
-    execution_time = round((end_time - start_time) * 1000, 2)
-
-    return {
-        "question": question,
-        "sql": sql,
-        "explanation": explanation,
-        "data": rows,
-        "execution_time": execution_time,
-        "rows_returned": len(rows),
-        "model": settings.gemini_model,
-        "status": "Success"
-    }
+@router.post("/sql", response_model=QueryResponse)
+def run_sql(request: SqlRequest, services: Services = Depends(get_services)):
+    """Run SQL written or edited by the user, through the same guard as generated SQL."""
+    return services.pipeline.run_sql(request.sql)

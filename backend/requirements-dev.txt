@@ -2,3 +2,9 @@
 
 # Sample data for scripts/setup_db.py
 Faker==40.23.0
+
+# Tests and linting
+pytest==9.1.1
+# Used by FastAPI's TestClient
+httpx2==2.14.0
+ruff==0.17.1

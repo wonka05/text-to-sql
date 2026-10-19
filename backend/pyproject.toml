@@ -1,0 +1,19 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "mysql: needs a MySQL server (set QG_TEST_MYSQL_ADMIN_URL); skipped otherwise",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["B008"]  # FastAPI's Depends() in argument defaults is the intended pattern
+
+[tool.ruff.lint.per-file-ignores]
+# Long SQL strings in test cases read better unwrapped
+"tests/**" = ["E501"]
